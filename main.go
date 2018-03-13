@@ -145,11 +145,15 @@ func main() {
 					Name:  "id",
 					Usage: "The ID or alias of the board",
 				},
+				cli.BoolFlag{
+					Name:  "all",
+					Usage: "List all cards from all boards that are assigned to me",
+				},
 			},
 			Action: func(c *cli.Context) error {
 				id := c.String("id")
 
-				if id == "" {
+				if id == "" && c.Bool("all") == false {
 					fmt.Println("Error: Empty ID or alias")
 					// TODO: No
 					return nil
@@ -161,40 +165,53 @@ func main() {
 					id = aliasId.(string)
 				}
 
-				board, err := user.GetBoard(id)
-				if err != nil {
-					panic(err)
-				}
-
 				selfId, err := user.GetUserId()
 				if err != nil {
 					panic(err)
 				}
 
-				cards, err := board.GetCards(user)
-				if err != nil {
-					panic(err)
-				}
-				lists, err := board.GetLists(user)
-				if err != nil {
-					panic(err)
-				}
-				labels, err := board.GetLabels(user)
-				if err != nil {
-					panic(err)
-				}
-
-				for _, card := range cards {
-					if !contains(card.Users, selfId) {
-						continue
+				var boards []trello.TrelloBoard
+				if c.Bool("all") {
+					boards, err = user.GetBoards()
+					if err != nil {
+						panic(err)
+					}
+				} else {
+					board, err := user.GetBoard(id)
+					if err != nil {
+						panic(err)
 					}
 
-					list_name, ok := lists[card.IdList]
-					if !ok {
-						list_name = ""
+					boards = []trello.TrelloBoard{board}
+				}
+
+				for _, board := range boards {
+					cards, err := board.GetCards(user)
+					if err != nil {
+						panic(err)
+					}
+					lists, err := board.GetLists(user)
+					if err != nil {
+						panic(err)
+					}
+					labels, err := board.GetLabels(user)
+					if err != nil {
+						panic(err)
 					}
 
-					printCardPreview(card, list_name, labels)
+					fmt.Printf("%s\n", color.New(color.FgRed).SprintFunc()(board.Name))
+					for _, card := range cards {
+						if !contains(card.Users, selfId) {
+							continue
+						}
+
+						list_name, ok := lists[card.IdList]
+						if !ok {
+							list_name = ""
+						}
+
+						printCardPreview(card, list_name, labels)
+					}
 				}
 
 				return nil
