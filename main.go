@@ -22,6 +22,17 @@ func contains(arr []string, str string) bool {
 	return false
 }
 
+func FilterAssignedCards(cards []trello.TrelloCard, uid string) []trello.TrelloCard {
+	ret := make([]trello.TrelloCard, 0)
+	for _, card := range cards {
+		if contains(card.Users, uid) {
+			ret = append(ret, card)
+		}
+	}
+
+	return ret
+}
+
 func printCardPreview(card trello.TrelloCard, list_name string, labels map[string]trello.TrelloLabel) {
 	used_labels := make([]string, 0)
 	for _, l := range card.Labels {
@@ -190,6 +201,13 @@ func main() {
 					if err != nil {
 						panic(err)
 					}
+
+					assigned_cards := FilterAssignedCards(cards, selfId)
+					if len(assigned_cards) == 0 {
+						fmt.Printf("No assigned cards in board '%s'\n", color.New(color.FgRed).SprintFunc()(board.Name))
+						continue
+					}
+
 					lists, err := board.GetLists(user)
 					if err != nil {
 						panic(err)
